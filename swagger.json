@@ -1,0 +1,520 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Poll API",
+    "description": "A REST API for creating and voting on polls",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development server"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "description": "Returns server status",
+        "tags": ["Health"],
+        "responses": {
+          "200": {
+            "description": "Server is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time",
+                      "example": "2025-01-26T10:00:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/polls": {
+      "get": {
+        "summary": "List all polls",
+        "description": "Returns a list of all polls with basic information",
+        "tags": ["Polls"],
+        "responses": {
+          "200": {
+            "description": "List of polls",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "type": "integer",
+                      "example": 2
+                    },
+                    "polls": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PollSummary"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new poll",
+        "description": "Creates a new poll with a question and 2-10 options",
+        "tags": ["Polls"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePollRequest"
+              },
+              "examples": {
+                "programming": {
+                  "summary": "Programming language poll",
+                  "value": {
+                    "question": "What's your favorite programming language?",
+                    "options": ["JavaScript", "Python", "Go", "Rust"]
+                  }
+                },
+                "pizza": {
+                  "summary": "Pizza topping poll",
+                  "value": {
+                    "question": "Best pizza topping?",
+                    "options": ["Pepperoni", "Mushrooms", "Pineapple"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Poll created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Poll"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "noQuestion": {
+                    "summary": "Missing question",
+                    "value": {
+                      "error": "Question is required"
+                    }
+                  },
+                  "fewOptions": {
+                    "summary": "Too few options",
+                    "value": {
+                      "error": "At least 2 options are required"
+                    }
+                  },
+                  "manyOptions": {
+                    "summary": "Too many options",
+                    "value": {
+                      "error": "Maximum 10 options allowed"
+                    }
+                  },
+                  "duplicates": {
+                    "summary": "Duplicate options",
+                    "value": {
+                      "error": "Duplicate options are not allowed"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/polls/{id}": {
+      "get": {
+        "summary": "Get poll results",
+        "description": "Returns a poll with vote counts, percentages, and winner information",
+        "tags": ["Polls"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Poll ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Poll results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PollResults"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Poll not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Poll not found"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a poll",
+        "description": "Permanently deletes a poll and all its votes",
+        "tags": ["Polls"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Poll ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Poll deleted successfully"
+          },
+          "404": {
+            "description": "Poll not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Poll not found"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/polls/{id}/vote": {
+      "post": {
+        "summary": "Vote on a poll",
+        "description": "Casts a vote on a poll. Each voter ID can only vote once per poll.",
+        "tags": ["Voting"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Poll ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoteRequest"
+              },
+              "example": {
+                "optionIndex": 0,
+                "voterId": "user-123"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Vote cast successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PollResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid vote",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "alreadyVoted": {
+                    "summary": "Duplicate vote",
+                    "value": {
+                      "error": "You have already voted on this poll"
+                    }
+                  },
+                  "invalidOption": {
+                    "summary": "Invalid option",
+                    "value": {
+                      "error": "Option does not exist"
+                    }
+                  },
+                  "noVoterId": {
+                    "summary": "Missing voter ID",
+                    "value": {
+                      "error": "Voter ID is required"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Poll not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Poll not found"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreatePollRequest": {
+        "type": "object",
+        "required": ["question", "options"],
+        "properties": {
+          "question": {
+            "type": "string",
+            "description": "The poll question",
+            "example": "What's your favorite programming language?"
+          },
+          "options": {
+            "type": "array",
+            "description": "Poll options (2-10 items, no duplicates)",
+            "minItems": 2,
+            "maxItems": 10,
+            "items": {
+              "type": "string"
+            },
+            "example": ["JavaScript", "Python", "Go", "Rust"]
+          }
+        }
+      },
+      "VoteRequest": {
+        "type": "object",
+        "required": ["optionIndex", "voterId"],
+        "properties": {
+          "optionIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based index of the option to vote for",
+            "example": 0
+          },
+          "voterId": {
+            "type": "string",
+            "description": "Unique identifier for the voter (prevents duplicate votes)",
+            "example": "user-123"
+          }
+        }
+      },
+      "Poll": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "question": {
+            "type": "string",
+            "example": "What's your favorite programming language?"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Option"
+            }
+          },
+          "voters": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": []
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2025-01-26T10:00:00.000Z"
+          }
+        }
+      },
+      "PollSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "question": {
+            "type": "string",
+            "example": "What's your favorite programming language?"
+          },
+          "optionCount": {
+            "type": "integer",
+            "example": 4
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2025-01-26T10:00:00.000Z"
+          }
+        }
+      },
+      "PollResults": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "question": {
+            "type": "string",
+            "example": "What's your favorite programming language?"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OptionWithPercentage"
+            }
+          },
+          "totalVotes": {
+            "type": "integer",
+            "example": 10
+          },
+          "winners": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Winning option(s) - multiple if tied",
+            "example": ["JavaScript"]
+          },
+          "voterCount": {
+            "type": "integer",
+            "example": 10
+          },
+          "isTied": {
+            "type": "boolean",
+            "example": false
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2025-01-26T10:00:00.000Z"
+          }
+        }
+      },
+      "Option": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "example": "JavaScript"
+          },
+          "votes": {
+            "type": "integer",
+            "example": 0
+          }
+        }
+      },
+      "OptionWithPercentage": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "example": "JavaScript"
+          },
+          "votes": {
+            "type": "integer",
+            "example": 5
+          },
+          "percentage": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "example": 50
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Poll not found"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Server health endpoints"
+    },
+    {
+      "name": "Polls",
+      "description": "Poll management endpoints"
+    },
+    {
+      "name": "Voting",
+      "description": "Voting endpoints"
+    }
+  ]
+}
