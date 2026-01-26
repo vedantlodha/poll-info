@@ -1,0 +1,9 @@
+node_modules/
+coverage/
+.env
+.DS_Store
+*.log
+npm-debug.log*
+
+# Keep polls.json but ignore test data files
+data/test-*.json
