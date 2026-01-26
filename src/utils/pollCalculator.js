@@ -23,6 +23,7 @@ function calculatePercentages(options) {
   }));
 }
 
+
 /**
  * Determines the winning option(s) - handles ties
  * @param {Array} options - Array of options with vote counts
