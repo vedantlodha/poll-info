@@ -19,7 +19,7 @@ function calculatePercentages(options) {
 
   return options.map(option => ({
     ...option,
-    percentage: totalVotes === 0 ? 0 : Math.round((option.votes / totalVotes) * 100)
+    percentage: totalVotes === 0 ? 0 : Math.round(((option.votes || 0) / totalVotes) * 100)
   }));
 }
 
