@@ -23,7 +23,6 @@ function calculatePercentages(options) {
   }));
 }
 
-a
 
 /**
  * Determines the winning option(s) - handles ties
