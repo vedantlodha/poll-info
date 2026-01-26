@@ -22,7 +22,7 @@ function calculatePercentages(options) {
     percentage: totalVotes === 0 ? 0 : Math.round((option.votes / totalVotes) * 100)
   }));
 }
-
+a
 
 /**
  * Determines the winning option(s) - handles ties
